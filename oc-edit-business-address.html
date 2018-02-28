@@ -142,7 +142,7 @@
 					isActive: {
 						type: Boolean,
 						notify: true,
-					}
+					},
 				};
 			}
 
@@ -205,7 +205,12 @@
 				this._organisationAddress.latitude = this._latLng.lat;
 				this.$.organisationApi.createAddress(this._organisationId, this._organisationAddress)
 					.then(() => {
-				});
+					this.$.toast.success('Business Address Created!');
+				this.isActive = false;
+			}).catch((e) => {
+					this.$.toast.failed('Failed To Create Business Address');
+				console.error(e.message);
+			});
 			}
 		}
 
