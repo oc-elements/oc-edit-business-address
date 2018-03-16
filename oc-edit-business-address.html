@@ -156,24 +156,25 @@
 				const city = this._organisationAddress.city;
 				this.$.geoLookup.getLocation(street, suburb, city).then((request) => {
 					const diplayPosition = request.response.Response.View[0].Result[0].Location.DisplayPosition;
-				this._latLng = {
-					lat: diplayPosition.Latitude,
-					lng: diplayPosition.Longitude,
-				};
+					this._latLng = {
+						lat: diplayPosition.Latitude,
+						lng: diplayPosition.Longitude,
+					};
 
-				this.$.toast.successStay('Map pin set. Please adjust map pin if location is incorrect.');
-			});
+					this.$.toast.successStay('Map pin set. Please adjust map pin if location is incorrect.');
+				});
 			}
 
 			_getOrganisationAddress() {
+				this._organisationAddress = {};
 				this.$.organisationApi.getAddress(this._organisationId)
 					.then((request) => {
-					this._organisationAddress = request.response;
-				this._latLng = {
-					lat: request.response.latitude,
-					lng: request.response.longitude,
-				};
-			});
+						this._organisationAddress = request.response;
+						this._latLng = {
+							lat: request.response.latitude,
+							lng: request.response.longitude,
+						};
+					});
 			}
 
 			_updateEditAddress() {
@@ -192,12 +193,12 @@
 				delete addressObject.id;
 				this.$.organisationApi.updateAddress(this._organisationAddress.id, addressObject)
 					.then(() => {
-					this.$.toast.success('Business Address Updated!');
-				this.isActive = false;
-			}).catch((e) => {
+						this.$.toast.success('Business Address Updated!');
+						this.isActive = false;
+					}).catch((e) => {
 					this.$.toast.failed('Failed To Update Business Address');
-				console.error(e.message);
-			});
+					console.error(e.message);
+				});
 			}
 
 			_createOrganisationAddress() {
@@ -205,12 +206,12 @@
 				this._organisationAddress.latitude = this._latLng.lat;
 				this.$.organisationApi.createAddress(this._organisationId, this._organisationAddress)
 					.then(() => {
-					this.$.toast.success('Business Address Created!');
-				this.isActive = false;
-			}).catch((e) => {
+						this.$.toast.success('Business Address Created!');
+						this.isActive = false;
+					}).catch((e) => {
 					this.$.toast.failed('Failed To Create Business Address');
-				console.error(e.message);
-			});
+					console.error(e.message);
+				});
 			}
 		}
 
