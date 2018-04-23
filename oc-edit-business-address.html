@@ -2,7 +2,9 @@
 <link rel="import" href="../oc-organisation-api/oc-organisation-api.html">
 <link rel="import" href="../oc-core-utils/oc-store.html">
 <link rel="import" href="../oc-leaflet-map/oc-leaflet-map.html">
+<link rel="import" href="../oc-leaflet-map/oc-leaflet-circle.html">
 <link rel="import" href="../oc-toast/oc-toast.html">
+<link rel="import" href="../oc-paper-dialog/oc-paper-dialog.html">
 <link rel="import" href="../oc-geo-lookup/oc-geo-lookup.html">
 <link rel="import" href="../oc-form-container/oc-form-container.html">
 
@@ -29,6 +31,10 @@
         <oc-organisation-api id="organisationApi"></oc-organisation-api>
         <oc-geo-lookup id="geoLookup"></oc-geo-lookup>
         <oc-toast id="toast"></oc-toast>
+        <oc-paper-dialog id="dialog" subject="Address Found"
+                         body="Map pin set. Please adjust map pin if location is incorrect."
+                         primary-label="Ok" secondary-label="">
+        </oc-paper-dialog>
         <oc-form-container header="Business Address">
             <div class="row">
                 <div class="col-xs-12">
@@ -88,7 +94,15 @@
 
             <div class="row">
                 <div class="col-xs-12">
-                    <oc-leaflet-map lat-lng="{{_latLng}}"></oc-leaflet-map>
+                    <paper-input id="radius" type="text" label="Coverage Area(m)"
+                                 value="{{_radius}}"></paper-input>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-xs-12">
+                    <oc-leaflet-circle id="coverageArea"></oc-leaflet-circle>
+                    <oc-leaflet-map id="map" lat-lng="{{_latLng}}"></oc-leaflet-map>
                 </div>
             </div>
 
@@ -130,10 +144,16 @@
 					},
 					_latLng: {
 						type: Object,
+						observer: '_createRadiusOnMap',
 					},
 					_organisationAddress: {
 						type: Object,
 						value: {},
+					},
+					_radius: {
+						type: Number,
+						value: 100,
+						observer: '_createRadiusOnMap',
 					},
 					_addressValid: {
 						type: Boolean,
@@ -150,19 +170,33 @@
 				super.ready();
 			}
 
+			/* Create circle then add it to the map*/
+			_createRadiusOnMap() {
+				if (this._latLng) {
+					const circle = this.$.coverageArea.createCircle(this._latLng, this._radius);
+					this.$.map.addCircleToMap(circle, false, this._radius);
+				}
+			}
+
 			_onValidateAddress() {
 				const street = this._organisationAddress.streetNumber + ' ' + this._organisationAddress.streetName;
 				const suburb = this._organisationAddress.suburb;
 				const city = this._organisationAddress.city;
-				this.$.geoLookup.getLocation(street, suburb, city).then((request) => {
-					const diplayPosition = request.response.Response.View[0].Result[0].Location.DisplayPosition;
-					this._latLng = {
-						lat: diplayPosition.Latitude,
-						lng: diplayPosition.Longitude,
-					};
+				this.$.geoLookup.getLocation(street, suburb, city)
+					.then((request) => {
+						if (!request.response.Response.View[0]) throw {message: 'No Results found'};
+						const diplayPosition = request.response.Response.View[0].Result[0].Location.DisplayPosition;
+						this._latLng = {
+							lat: diplayPosition.Latitude,
+							lng: diplayPosition.Longitude,
+						};
 
-					this.$.toast.successStay('Map pin set. Please adjust map pin if location is incorrect.');
-				});
+						this.$.dialog.open();
+						this._createRadiusOnMap();
+					})
+					.catch((error) => {
+						this.$.toast.failed(`Failed To Find Address: ${error.message}`);
+					});
 			}
 
 			_getOrganisationAddress() {
@@ -174,6 +208,26 @@
 							lat: request.response.latitude,
 							lng: request.response.longitude,
 						};
+					})
+					.then(() => this._getDeliveryAreas());
+			}
+
+			_getDeliveryAreas() {
+				this.$.organisationApi.getDeliveryAreas(this._organisationId)
+					.then((request) => {
+						this.areas = request.response.results;
+
+						/* TODO: this is temp, we only going to use 1 area per shop. This will be more later on */
+						for (let i = 0; i < this.areas.length; i++) {
+							if (this.areas[i].latitude === this._latLng.lat &&
+								this.areas[i].longitude === this._latLng.lng) {
+
+								this._radius = this.areas[i].radius;
+								this._currentArea = this.areas[i];
+
+								break;
+							}
+						}
 					});
 			}
 
@@ -183,6 +237,13 @@
 					this._updateOrganisationAddress();
 				else
 					this._createOrganisationAddress();
+
+				/* Update or save radius */
+				if (this._currentArea)
+					this._updateDeliveryArea();
+				else
+					this._createDeliveryArea();
+
 			}
 
 			_updateOrganisationAddress() {
@@ -210,6 +271,38 @@
 						this.isActive = false;
 					}).catch((e) => {
 					this.$.toast.failed('Failed To Create Business Address');
+					console.error(e.message);
+				});
+			}
+
+			_updateDeliveryArea() {
+				const area = {
+					latitude: this._latLng.lat,
+					longitude: this._latLng.lng,
+					radius: this._radius,
+				};
+
+				this.$.organisationApi.updateDeliveryArea(this._organisationId, this._currentArea.areaId, area)
+					.then(() => {
+						this.$.toast.success('Area Radius Updated!');
+					}).catch((e) => {
+					this.$.toast.failed('Failed To Update Area Radius');
+					console.error(e.message);
+				});
+			}
+
+			_createDeliveryArea() {
+				const area = {
+					latitude: this._latLng.lat,
+					longitude: this._latLng.lng,
+					radius: this._radius,
+				};
+
+				this.$.organisationApi.createDeliveryArea(this._organisationId, area)
+					.then(() => {
+						this.$.toast.success('Area Radius Created!');
+					}).catch((e) => {
+					this.$.toast.failed('Failed To Create Area Radius');
 					console.error(e.message);
 				});
 			}
