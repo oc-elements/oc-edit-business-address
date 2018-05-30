@@ -7,10 +7,12 @@
 <link rel="import" href="../oc-paper-dialog/oc-paper-dialog.html">
 <link rel="import" href="../oc-geo-lookup/oc-geo-lookup.html">
 <link rel="import" href="../oc-form-container/oc-form-container.html">
+<link rel="import" href="../paper-button/paper-button.html">
+<link rel="import" href="../paper-dialog/paper-dialog.html">
 
 <dom-module id="oc-edit-business-address">
     <template>
-        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
         <style is="custom-style">
 
             :host {
@@ -26,6 +28,18 @@
                 margin: 10px 0;
             }
 
+            .location-button {
+                width: 100%; background-color: #d2d2d2;
+            }
+
+            oc-leaflet-map {
+                height: 100%;
+            }
+
+            paper-input {
+                width: 100%;
+            }
+
         </style>
 
         <oc-organisation-api id="organisationApi"></oc-organisation-api>
@@ -35,72 +49,69 @@
                          body="Map pin set. Please adjust map pin if location is incorrect."
                          primary-label="Ok" secondary-label="">
         </oc-paper-dialog>
+
+        <paper-dialog id="multipleLocationDialog" modal on-iron-overlay-opened="_patchOverlay" >
+            <div>Multiple Locations Found. Please Choose The Correct One</div>
+            <hr>
+            <template is="dom-repeat" items="[[_locations]]">
+                <div class="row m-0 mb-1">
+                    <paper-button raised class="location-button" on-tap="_onLocationClick">[[item.Location.Address.Label]]</paper-button>
+                </div>
+            </template>
+            <br>
+        </paper-dialog>
+
         <oc-form-container header="Business Address">
             <div class="row">
-                <div class="col-xs-12">
-                    <paper-input id="streetNumber" type="text" label="Street Number"
-                                 value="{{_organisationAddress.streetNumber}}"></paper-input>
-                </div>
-            </div>
+                <div class="col-3">
+                    <div class="container">
+                        <div class="row">
+                            <paper-input id="streetNumber" type="text" label="Street Number"
+                                         value="{{_organisationAddress.streetNumber}}"></paper-input>
+                        </div>
 
-            <div class="row">
-                <div class="col-xs-12">
-                    <paper-input id="streetName" type="text" label="Street Address"
-                                 value="{{_organisationAddress.streetName}}"></paper-input>
-                </div>
-            </div>
+                        <div class="row">
+                            <paper-input id="streetName" type="text" label="Street Address"
+                                         value="{{_organisationAddress.streetName}}"></paper-input>
+                        </div>
 
-            <div class="row">
-                <div class="col-xs-12">
-                    <paper-input id="complex" type="text" label="Complex"
-                                 value="{{_organisationAddress.complex}}"></paper-input>
-                </div>
-            </div>
+                        <div class="row">
+                            <paper-input id="complex" type="text" label="Complex"
+                                         value="{{_organisationAddress.complex}}"></paper-input>
+                        </div>
 
-            <div class="row">
-                <div class="col-xs-12">
-                    <paper-input id="suburb" type="text" label="Suburb"
-                                 value="{{_organisationAddress.suburb}}"></paper-input>
-                </div>
-            </div>
+                        <div class="row">
+                            <paper-input id="suburb" type="text" label="Suburb"
+                                         value="{{_organisationAddress.suburb}}"></paper-input>
+                        </div>
 
-            <div class="row">
-                <div class="col-xs-12">
-                    <paper-input id="city" type="text" label="City"
-                                 value="{{_organisationAddress.city}}"></paper-input>
-                </div>
-            </div>
+                        <div class="row">
+                            <paper-input id="city" type="text" label="City"
+                                         value="{{_organisationAddress.city}}"></paper-input>
+                        </div>
 
-            <div class="row">
-                <div class="col-xs-12">
-                    <paper-input id="postalCode" type="text" label="Postal Code"
-                                 value="{{_organisationAddress.postalCode}}"></paper-input>
-                </div>
-            </div>
+                        <div class="row">
+                            <paper-input id="postalCode" type="text" label="Postal Code"
+                                         value="{{_organisationAddress.postalCode}}"></paper-input>
+                        </div>
 
-            <div class="row">
-                <div class="col-xs-12">
-                    <paper-input id="province" type="text" label="Province"
-                                 value="{{_organisationAddress.province}}"></paper-input>
-                </div>
-            </div>
+                        <div class="row">
+                            <paper-input id="province" type="text" label="Province"
+                                         value="{{_organisationAddress.province}}"></paper-input>
+                        </div>
 
-            <div class="row">
-                <div class="col-xs-12">
-                    <paper-input id="country" type="text" label="Country"
-                                 value="{{_organisationAddress.country}}"></paper-input>
-                </div>
-            </div>
+                        <div class="row">
+                            <paper-input id="country" type="text" label="Country"
+                                         value="{{_organisationAddress.country}}"></paper-input>
+                        </div>
 
-            <div class="row">
-                <div class="col-xs-12">
-                    <paper-input id="radius" type="text" label="Coverage Area(m)"
-                                 value="{{_radius}}"></paper-input>
+                        <div class="row">
+                            <paper-input id="radius" type="text" label="Coverage Area(m)"
+                                         value="{{_radius}}"></paper-input>
+                        </div>
+                    </div>
                 </div>
-            </div>
-
-            <div class="row">
-                <div class="col-xs-12">
+                <div class="col-9">
                     <oc-leaflet-circle id="coverageArea"></oc-leaflet-circle>
                     <oc-leaflet-map id="map" lat-lng="{{_latLng}}"></oc-leaflet-map>
                 </div>
@@ -178,20 +189,36 @@
 				}
 			}
 
+			_onLocationClick(e) {
+				const displayPosition = e.model.item.Location.DisplayPosition;
+				this._setMapLocation(displayPosition.Latitude, displayPosition.Longitude);
+				this.$.multipleLocationDialog.close();
+			}
+
+			_setMapLocation(lat, lng) {
+				this._latLng = {
+					lat: lat,
+					lng: lng,
+				};
+			}
+
 			_onValidateAddress() {
-				const street = this._organisationAddress.streetNumber + ' ' + this._organisationAddress.streetName;
+				const street = this._organisationAddress.streetNumber || '' + ' ' + this._organisationAddress.streetName || '';
 				const suburb = this._organisationAddress.suburb;
 				const city = this._organisationAddress.city;
 				this.$.geoLookup.getLocation(street, suburb, city)
 					.then((request) => {
 						if (!request.response.Response.View[0]) throw {message: 'No Results found'};
-						const diplayPosition = request.response.Response.View[0].Result[0].Location.DisplayPosition;
-						this._latLng = {
-							lat: diplayPosition.Latitude,
-							lng: diplayPosition.Longitude,
-						};
 
-						this.$.dialog.open();
+						if (request.response.Response.View[0].Result.length === 1) {
+							const diplayPosition = request.response.Response.View[0].Result[0].Location.DisplayPosition;
+
+							this._setMapLocation(diplayPosition.Latitude, diplayPosition.Longitude);
+							this.$.dialog.open();
+						} else if (request.response.Response.View[0].Result.length > 1) {
+							this.$.multipleLocationDialog.open();
+							this._locations = request.response.Response.View[0].Result;
+						}
 						this._createRadiusOnMap();
 					})
 					.catch((error) => {
@@ -238,7 +265,6 @@
 				else
 					this._createOrganisationAddress();
 
-				/* Update or save radius */
 				if (this._currentArea)
 					this._updateDeliveryArea();
 				else
@@ -305,6 +331,13 @@
 					this.$.toast.failed('Failed To Create Area Radius');
 					console.error(e.message);
 				});
+
+			}
+
+			_patchOverlay(e){
+				if (e.target.withBackdrop) {
+					e.target.parentNode.insertBefore(e.target.backdropElement, e.target);
+				}
 			}
 		}
 
