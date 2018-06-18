@@ -203,7 +203,8 @@
 			}
 
 			_onValidateAddress() {
-				const street = this._organisationAddress.streetNumber || '' + ' ' + this._organisationAddress.streetName || '';
+				let street = this._organisationAddress.streetNumber || '';
+				street += ' ' + (this._organisationAddress.streetName || '');
 				const suburb = this._organisationAddress.suburb;
 				const city = this._organisationAddress.city;
 				this.$.geoLookup.getLocation(street, suburb, city)
