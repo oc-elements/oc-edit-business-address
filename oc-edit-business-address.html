@@ -29,7 +29,19 @@
             }
 
             .location-button {
-                width: 100%; background-color: #d2d2d2;
+                width: 100%;
+                background-color: #d2d2d2;
+            }
+
+            .close-button {
+                position: absolute;
+                top: 0;
+                right: 0;
+                margin: 0;
+                padding-right: 5px;
+                padding-left: 5px;
+                min-width: 25px;
+                background-color: whitesmoke;
             }
 
             oc-leaflet-map {
@@ -38,6 +50,10 @@
 
             paper-input {
                 width: 100%;
+            }
+
+            paper-button {
+                color: var(--app-primary-color);
             }
 
         </style>
@@ -50,12 +66,15 @@
                          primary-label="Ok" secondary-label="">
         </oc-paper-dialog>
 
-        <paper-dialog id="multipleLocationDialog" modal on-iron-overlay-opened="_patchOverlay" >
-            <div>Multiple Locations Found. Please Choose The Correct One</div>
+        <paper-dialog id="multipleLocationDialog" modal on-iron-overlay-opened="_patchOverlay">
+            <paper-button class="close-button" raised on-tap="_onCloseMultipleLocationDialog">X</paper-button>
+            <div>Please Select The Correct One</div>
             <hr>
             <template is="dom-repeat" items="[[_locations]]">
                 <div class="row m-0 mb-1">
-                    <paper-button raised class="location-button" on-tap="_onLocationClick">[[item.Location.Address.Label]]</paper-button>
+                    <paper-button raised class="location-button" on-tap="_onLocationClick">
+                        [[item.Location.Address.Label]]
+                    </paper-button>
                 </div>
             </template>
             <br>
@@ -192,6 +211,10 @@
 			_onLocationClick(e) {
 				const displayPosition = e.model.item.Location.DisplayPosition;
 				this._setMapLocation(displayPosition.Latitude, displayPosition.Longitude);
+				this._onCloseMultipleLocationDialog();
+			}
+
+			_onCloseMultipleLocationDialog() {
 				this.$.multipleLocationDialog.close();
 			}
 
@@ -335,7 +358,7 @@
 
 			}
 
-			_patchOverlay(e){
+			_patchOverlay(e) {
 				if (e.target.withBackdrop) {
 					e.target.parentNode.insertBefore(e.target.backdropElement, e.target);
 				}
