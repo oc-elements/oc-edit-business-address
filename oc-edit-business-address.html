@@ -9,145 +9,136 @@
 <link rel="import" href="../oc-form-container/oc-form-container.html">
 <link rel="import" href="../paper-button/paper-button.html">
 <link rel="import" href="../paper-dialog/paper-dialog.html">
+<link rel="import" href="/bower_components/paper-checkbox/paper-checkbox.html">
+<link rel="import" href="../paper-input/paper-textarea.html">
 
 <dom-module id="oc-edit-business-address">
-    <template>
-        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
-        <style is="custom-style">
+	<template>
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+		<style is="custom-style">
+			:host {
+				display: block;
+				background: #fff;
+				color: #000;
+			}
 
-            :host {
-                display: block;
-                background: #fff;
-                color: #000;
-            }
+			.update-button {
+				background-color: #e0992f;
+				width: 100%;
+				height: 50px;
+				margin: 10px 0;
+			}
 
-            .update-button {
-                background-color: #e0992f;
-                width: 100%;
-                height: 50px;
-                margin: 10px 0;
-            }
+			.location-button {
+				width: 100%;
+				background-color: #d2d2d2;
+			}
 
-            .location-button {
-                width: 100%;
-                background-color: #d2d2d2;
-            }
+			.close-button {
+				position: absolute;
+				top: 0;
+				right: 0;
+				margin: 0;
+				padding-right: 5px;
+				padding-left: 5px;
+				min-width: 25px;
+				background-color: whitesmoke;
+			}
 
-            .close-button {
-                position: absolute;
-                top: 0;
-                right: 0;
-                margin: 0;
-                padding-right: 5px;
-                padding-left: 5px;
-                min-width: 25px;
-                background-color: whitesmoke;
-            }
+			oc-leaflet-map {
+				height: 100%;
+			}
 
-            oc-leaflet-map {
-                height: 100%;
-            }
+			paper-input {
+				width: 100%;
+			}
 
-            paper-input {
-                width: 100%;
-            }
+			paper-button {
+				color: var(--app-primary-color);
+			}
+		</style>
 
-            paper-button {
-                color: var(--app-primary-color);
-            }
+		<oc-organisation-api id="organisationApi"></oc-organisation-api>
+		<oc-geo-lookup id="geoLookup"></oc-geo-lookup>
+		<oc-toast id="toast"></oc-toast>
+		<oc-paper-dialog id="dialog" subject="Address Found" body="Map pin set. Please adjust map pin if location is incorrect."
+		 primary-label="Ok" secondary-label="">
+		</oc-paper-dialog>
 
-        </style>
+		<paper-dialog id="multipleLocationDialog" modal on-iron-overlay-opened="_patchOverlay">
+			<paper-button class="close-button" raised on-tap="_onCloseMultipleLocationDialog">X</paper-button>
+			<div>Please Select The Correct One</div>
+			<hr>
+			<template is="dom-repeat" items="[[_locations]]">
+				<div class="row m-0 mb-1">
+					<paper-button raised class="location-button" on-tap="_onLocationClick">
+						[[item.Location.Address.Label]]
+					</paper-button>
+				</div>
+			</template>
+			<br>
+		</paper-dialog>
 
-        <oc-organisation-api id="organisationApi"></oc-organisation-api>
-        <oc-geo-lookup id="geoLookup"></oc-geo-lookup>
-        <oc-toast id="toast"></oc-toast>
-        <oc-paper-dialog id="dialog" subject="Address Found"
-                         body="Map pin set. Please adjust map pin if location is incorrect."
-                         primary-label="Ok" secondary-label="">
-        </oc-paper-dialog>
+		<oc-form-container header="Add New Address">
+			<div class="row">
+				<div class="col-3">
+					<iron-form id="addressForm">
+						<form method="get">
+							<paper-input type="text" id="name" label="Address Name" value="{{_organisationAddress.name}}"></paper-input>
+							<paper-input type="text" id="country" label="Country" value="{{_organisationAddress.country}}"></paper-input>
+							<paper-input type="text" id="province" label="Province" value="{{_organisationAddress.province}}"></paper-input>
+							<paper-input type="text" id="city" label="City" value="{{_organisationAddress.city}}"></paper-input>
+							<paper-input type="text" id="suburb" label="Suburb" value="{{_organisationAddress.suburb}}"></paper-input>
+							<paper-input type="text" id="complexName" label="Complex Name" value="{{_organisationAddress.complexName}}"></paper-input>
+							<paper-input type="text" id="unitNumber" label="Unit Number" value="{{_organisationAddress.unitNumber}}"></paper-input>
+							<paper-input type="text" id="streetName" label="Street Address" required value="{{_organisationAddress.streetName}}"></paper-input>
+							<paper-input type="text" id="streetNumber" label="Street Number" required value="{{_organisationAddress.streetNumber}}"></paper-input>
+							<paper-input type="text" id="postalCode" label="Postal Code" value="{{_organisationAddress.postalCode}}"></paper-input>
+							<paper-textarea type="text" id="note" label="Note" value="{{_organisationAddress.note}}"></paper-textarea>
+							<paper-input type="text" id="radius" label="Coverage Area(m)" value="{{_radius}}"></paper-input>
+							<div class="row">
+								<paper-checkbox class="col" id="isPrimary" name="isPrimary" checked="{{_organisationAddress.isPrimary}}">Set as primary
+								</paper-checkbox>
+							</div>
+							<div class="row">
+								<paper-checkbox class="col" id="isFavourite" name="isFavourite" checked="{{_organisationAddress.isFavourite}}">Set
+									as favourite</paper-checkbox>
+							</div>
+							<div class="row">
+								<paper-checkbox class="col" id="isBilling" name="isBilling" checked="{{_organisationAddress.isBilling}}">Set as billing
+								</paper-checkbox>
+							</div>
+							<div class="row">
+								<paper-checkbox class="col" id="isCollection" name="isCollection" checked="{{_organisationAddress.isCollection}}">Set
+									as collection
+								</paper-checkbox>
+							</div>
+							<div class="row">
+								<paper-checkbox class="col" id="isDelivery" name="isDelivery" checked="{{_organisationAddress.isDelivery}}">Set as
+									delivery
+								</paper-checkbox>
+							</div>
+						</form>
+					</iron-form>
+				</div>
+				<div class="col-9">
+					<oc-leaflet-circle id="coverageArea"></oc-leaflet-circle>
+					<oc-leaflet-map id="map" lat-lng="{{_latLng}}"></oc-leaflet-map>
+				</div>
+			</div>
+			<paper-button class="update-button" raised on-tap="_viewAddress" hidden="[[_addressValid]]" slot="button">
+				View Address
+			</paper-button>
+			<paper-button class="update-button" raised on-tap="_onValidateAddress" hidden="[[_addressValid]]" slot="button">
+				Validate Address
+			</paper-button>
+			<paper-button class="update-button" on-tap="_updateEditAddress" hidden="[[_addressValid]]" slot="button">
+				Update/Edit Address
+			</paper-button>
+		</oc-form-container>
+	</template>
 
-        <paper-dialog id="multipleLocationDialog" modal on-iron-overlay-opened="_patchOverlay">
-            <paper-button class="close-button" raised on-tap="_onCloseMultipleLocationDialog">X</paper-button>
-            <div>Please Select The Correct One</div>
-            <hr>
-            <template is="dom-repeat" items="[[_locations]]">
-                <div class="row m-0 mb-1">
-                    <paper-button raised class="location-button" on-tap="_onLocationClick">
-                        [[item.Location.Address.Label]]
-                    </paper-button>
-                </div>
-            </template>
-            <br>
-        </paper-dialog>
-
-        <oc-form-container header="Business Address">
-            <div class="row">
-                <div class="col-3">
-                    <div class="container">
-                        <div class="row">
-                            <paper-input id="streetNumber" type="text" label="Street Number"
-                                         value="{{_organisationAddress.streetNumber}}"></paper-input>
-                        </div>
-
-                        <div class="row">
-                            <paper-input id="streetName" type="text" label="Street Address"
-                                         value="{{_organisationAddress.streetName}}"></paper-input>
-                        </div>
-
-                        <div class="row">
-                            <paper-input id="complex" type="text" label="Complex"
-                                         value="{{_organisationAddress.complex}}"></paper-input>
-                        </div>
-
-                        <div class="row">
-                            <paper-input id="suburb" type="text" label="Suburb"
-                                         value="{{_organisationAddress.suburb}}"></paper-input>
-                        </div>
-
-                        <div class="row">
-                            <paper-input id="city" type="text" label="City"
-                                         value="{{_organisationAddress.city}}"></paper-input>
-                        </div>
-
-                        <div class="row">
-                            <paper-input id="postalCode" type="text" label="Postal Code"
-                                         value="{{_organisationAddress.postalCode}}"></paper-input>
-                        </div>
-
-                        <div class="row">
-                            <paper-input id="province" type="text" label="Province"
-                                         value="{{_organisationAddress.province}}"></paper-input>
-                        </div>
-
-                        <div class="row">
-                            <paper-input id="country" type="text" label="Country"
-                                         value="{{_organisationAddress.country}}"></paper-input>
-                        </div>
-
-                        <div class="row">
-                            <paper-input id="radius" type="text" label="Coverage Area(m)"
-                                         value="{{_radius}}"></paper-input>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-9">
-                    <oc-leaflet-circle id="coverageArea"></oc-leaflet-circle>
-                    <oc-leaflet-map id="map" lat-lng="{{_latLng}}"></oc-leaflet-map>
-                </div>
-            </div>
-
-            <paper-button raised on-tap="_onValidateAddress" class="update-button" hidden="[[_addressValid]]"
-                          slot="button">
-                Validate Address
-            </paper-button>
-            <paper-button class="update-button" on-tap="_updateEditAddress" hidden="[[_addressValid]]"
-                          slot="button">
-                Update/Edit Address
-            </paper-button>
-        </oc-form-container>
-    </template>
-
-    <script>
+	<script>
 		/**
 		 * `oc-link-payment-account`
 		 * Update Or Edit Business Profile
@@ -162,6 +153,10 @@
 
 			static get properties() {
 				return {
+					addressId: {
+						type: Number,
+						observer: '_getOrganisationAddress'
+					},
 					_organisationId: {
 						type: Number,
 						statePath: 'organisation.id',
@@ -200,6 +195,9 @@
 				super.ready();
 			}
 
+			_foundId() {
+				alert(this.addressId);
+			}
 			/* Create circle then add it to the map*/
 			_createRadiusOnMap() {
 				if (this._latLng) {
@@ -230,9 +228,10 @@
 				street += ' ' + (this._organisationAddress.streetName || '');
 				const suburb = this._organisationAddress.suburb;
 				const city = this._organisationAddress.city;
-				this.$.geoLookup.getLocation(street, suburb, city)
+				const country = this._organisationAddress.country;
+				this.$.geoLookup.getLocation(street, suburb, city, country)
 					.then((request) => {
-						if (!request.response.Response.View[0]) throw {message: 'No Results found'};
+						if (!request.response.Response.View[0]) throw { message: 'No Results found' };
 
 						if (request.response.Response.View[0].Result.length === 1) {
 							const diplayPosition = request.response.Response.View[0].Result[0].Location.DisplayPosition;
@@ -251,8 +250,7 @@
 			}
 
 			_getOrganisationAddress() {
-				this._organisationAddress = {};
-				this.$.organisationApi.getAddress(this._organisationId)
+				this.$.organisationApi.getAddress(this.addressId)
 					.then((request) => {
 						this._organisationAddress = request.response;
 						this._latLng = {
@@ -262,9 +260,21 @@
 					})
 					.then(() => this._getDeliveryAreas());
 			}
+			// _getOrganisationAddress() {
+			// 	this._organisationAddress = {};
+			// 	this.$.organisationApi.getAddress(this._organisationId)
+			// 		.then((request) => {
+			// 			this._organisationAddress = request.response;
+			// 			this._latLng = {
+			// 				lat: request.response.latitude,
+			// 				lng: request.response.longitude,
+			// 			};
+			// 		})
+			// 		.then(() => this._getDeliveryAreas());
+			// }
 
 			_getDeliveryAreas() {
-				this.$.organisationApi.getDeliveryAreas(this._organisationId)
+				this.$.organisationApi.getDeliveryAreas(this.addressId)
 					.then((request) => {
 						this.areas = request.response.results;
 
@@ -307,9 +317,9 @@
 						this.$.toast.success('Business Address Updated!');
 						this.isActive = false;
 					}).catch((e) => {
-					this.$.toast.failed('Failed To Update Business Address');
-					console.error(e.message);
-				});
+						this.$.toast.failed('Failed To Update Business Address');
+						console.error(e.message);
+					});
 			}
 
 			_createOrganisationAddress() {
@@ -320,9 +330,9 @@
 						this.$.toast.success('Business Address Created!');
 						this.isActive = false;
 					}).catch((e) => {
-					this.$.toast.failed('Failed To Create Business Address');
-					console.error(e.message);
-				});
+						this.$.toast.failed('Failed To Create Business Address');
+						console.error(e.message);
+					});
 			}
 
 			_updateDeliveryArea() {
@@ -336,9 +346,9 @@
 					.then(() => {
 						this.$.toast.success('Area Radius Updated!');
 					}).catch((e) => {
-					this.$.toast.failed('Failed To Update Area Radius');
-					console.error(e.message);
-				});
+						this.$.toast.failed('Failed To Update Area Radius');
+						console.error(e.message);
+					});
 			}
 
 			_createDeliveryArea() {
@@ -352,9 +362,9 @@
 					.then(() => {
 						this.$.toast.success('Area Radius Created!');
 					}).catch((e) => {
-					this.$.toast.failed('Failed To Create Area Radius');
-					console.error(e.message);
-				});
+						this.$.toast.failed('Failed To Create Area Radius');
+						console.error(e.message);
+					});
 
 			}
 
@@ -366,5 +376,5 @@
 		}
 
 		window.customElements.define(OcEditBusinessAddress.is, OcEditBusinessAddress);
-    </script>
+	</script>
 </dom-module>
