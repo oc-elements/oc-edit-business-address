@@ -12,6 +12,7 @@
 <link rel="import" href="/bower_components/paper-checkbox/paper-checkbox.html">
 <link rel="import" href="../paper-input/paper-textarea.html">
 <link rel="import" href="../../src/oc-button-styles.html">
+<link rel="import" href="../iron-form/iron-form.html">
 
 
 <dom-module id="oc-edit-business-address">
@@ -86,18 +87,20 @@
 				<div class="col-3">
 					<iron-form id="addressForm">
 						<form method="get">
-							<paper-input type="text" id="name" label="Address Name" value="{{_organisationAddress.name}}"></paper-input>
-							<paper-input type="text" id="country" label="Country" value="{{_organisationAddress.country}}"></paper-input>
+							<paper-input type="text" id="name" label="Address Name" value="{{_organisationAddress.name}}" required auto-validate error-message="This field is required."></paper-input>
+							<paper-input type="text" id="country" label="Country" auto-validate pattern="South Africa" error-message="Only South Africa for now."
+							 value="South Africa" value="{{_organisationAddress.country}}"></paper-input>
 							<paper-input type="text" id="province" label="Province" value="{{_organisationAddress.province}}"></paper-input>
-							<paper-input type="text" id="city" label="City" value="{{_organisationAddress.city}}"></paper-input>
+							<paper-input type="text" id="city" label="City" value="{{_organisationAddress.city}}" required auto-validate error-message="This field is required."></paper-input>
 							<paper-input type="text" id="suburb" label="Suburb" value="{{_organisationAddress.suburb}}"></paper-input>
 							<paper-input type="text" id="complexName" label="Complex Name" value="{{_organisationAddress.complexName}}"></paper-input>
 							<paper-input type="text" id="unitNumber" label="Unit Number" value="{{_organisationAddress.unitNumber}}"></paper-input>
-							<paper-input type="text" id="streetName" label="Street Address" required value="{{_organisationAddress.streetName}}"></paper-input>
-							<paper-input type="text" id="streetNumber" label="Street Number" required value="{{_organisationAddress.streetNumber}}"></paper-input>
+							<paper-input type="text" id="streetName" label="Street Address" value="{{_organisationAddress.streetName}}" required auto-validate
+							 error-message="This field is required."></paper-input>
+							<paper-input type="text" id="streetNumber" label="Street Number" value="{{_organisationAddress.streetNumber}}"></paper-input>
 							<paper-input type="text" id="postalCode" label="Postal Code" value="{{_organisationAddress.postalCode}}"></paper-input>
 							<paper-textarea type="text" id="note" label="Note" value="{{_organisationAddress.note}}"></paper-textarea>
-							<paper-input type="text" id="radius" label="Coverage Area(m)" value="{{_radius}}"></paper-input>
+							<!-- <paper-input type="text" id="radius" label="Coverage Area(m)" value="{{_radius}}"></paper-input> -->
 							<div class="row">
 								<paper-checkbox class="col" id="isPrimary" name="isPrimary" checked="{{_organisationAddress.isPrimary}}">Set as primary
 								</paper-checkbox>
@@ -128,13 +131,13 @@
 					<oc-leaflet-map id="map" lat-lng="{{_latLng}}"></oc-leaflet-map>
 				</div>
 			</div>
-			<paper-button class="update-button" raised on-tap="_onValidateAddress" hidden="[[_addressValid]]" slot="button">
+			<paper-button class="update-button" raised on-tap="_onValidateAddress" slot="button">
 				Validate Address
 			</paper-button>
-			<paper-button class="update-button" on-tap="_updateEditAddress" hidden="[[_addressValid]]" slot="button">
+			<paper-button class="update-button" on-tap="_updateEditAddress" hidden="[[_addressInValid]]" slot="button">
 				[[_title]] Address
 			</paper-button>
-			<paper-button class="secondary-button" raised on-tap="_viewAddress" hidden="[[_addressValid]]" slot="button">
+			<paper-button class="secondary-button" raised on-tap="_viewAddress" slot="button">
 				Back to Address
 			</paper-button>
 		</oc-form-container>
@@ -157,6 +160,7 @@
 				return {
 					addressId: {
 						type: Number,
+						notify: true,
 						observer: '_getOrganisationAddress'
 					},
 					_organisationId: {
@@ -171,20 +175,21 @@
 					},
 					_latLng: {
 						type: Object,
-						observer: '_createRadiusOnMap',
+						//observer: '_createRadiusOnMap',
+						observer: '_checkLatLng',
 					},
 					_organisationAddress: {
 						type: Object,
 						value: {},
 					},
-					_radius: {
-						type: Number,
-						value: 100,
-						observer: '_createRadiusOnMap',
-					},
-					_addressValid: {
+					// _radius: {
+					// 	type: Number,
+					// 	value: 100,
+					// 	observer: '_createRadiusOnMap',
+					// },
+					_addressInValid: {
 						type: Boolean,
-						value: false,
+						value: true,
 					},
 					isActive: {
 						type: Boolean,
@@ -198,12 +203,12 @@
 			}
 
 			/* Create circle then add it to the map*/
-			_createRadiusOnMap() {
-				if (this._latLng) {
-					const circle = this.$.coverageArea.createCircle(this._latLng, this._radius);
-					this.$.map.addCircleToMap(circle, false, this._radius);
-				}
-			}
+			// _createRadiusOnMap() {
+			// 	if (this._latLng) {
+			// 		const circle = this.$.coverageArea.createCircle(this._latLng, this._radius);
+			// 		this.$.map.addCircleToMap(circle, false, this._radius);
+			// 	}
+			// }
 
 			_onLocationClick(e) {
 				const displayPosition = e.model.item.Location.DisplayPosition;
@@ -223,6 +228,7 @@
 			}
 
 			_onValidateAddress() {
+				if (!this.$.addressForm.validate()) return
 				let street = this._organisationAddress.streetNumber || '';
 				street += ' ' + (this._organisationAddress.streetName || '');
 				const suburb = this._organisationAddress.suburb;
@@ -241,7 +247,7 @@
 							this.$.multipleLocationDialog.open();
 							this._locations = request.response.Response.View[0].Result;
 						}
-						this._createRadiusOnMap();
+						// this._createRadiusOnMap();
 					})
 					.catch((error) => {
 						this.$.toast.failed(`Failed To Find Address: ${error.message}`);
@@ -254,6 +260,7 @@
 				} else {
 					this._title = "Add"
 				}
+				if (!this.addressId) return
 				this.$.organisationApi.getAddress(this.addressId)
 					.then((request) => {
 						this._organisationAddress = request.response;
@@ -262,7 +269,7 @@
 							lng: request.response.longitude,
 						};
 					})
-					.then(() => this._getDeliveryAreas());
+				// .then(() => this._getDeliveryAreas());
 			}
 			// _getOrganisationAddress() {
 			// 	this._organisationAddress = {};
@@ -277,36 +284,38 @@
 			// 		.then(() => this._getDeliveryAreas());
 			// }
 
-			_getDeliveryAreas() {
-				this.$.organisationApi.getDeliveryAreas(this.addressId)
-					.then((request) => {
-						this.areas = request.response.results;
+			// _getDeliveryAreas() {
+			// 	this.$.organisationApi.getDeliveryAreas(this.addressId)
+			// 		.then((request) => {
+			// 			this.areas = request.response.results;
 
-						/* TODO: this is temp, we only going to use 1 area per shop. This will be more later on */
-						for (let i = 0; i < this.areas.length; i++) {
-							if (this.areas[i].latitude === this._latLng.lat &&
-								this.areas[i].longitude === this._latLng.lng) {
+			// 			/* TODO: this is temp, we only going to use 1 area per shop. This will be more later on */
+			// 			for (let i = 0; i < this.areas.length; i++) {
+			// 				if (this.areas[i].latitude === this._latLng.lat &&
+			// 					this.areas[i].longitude === this._latLng.lng) {
 
-								this._radius = this.areas[i].radius;
-								this._currentArea = this.areas[i];
+			// 					this._radius = this.areas[i].radius;
+			// 					this._currentArea = this.areas[i];
 
-								break;
-							}
-						}
-					});
-			}
+			// 					break;
+			// 				}
+			// 			}
+			// 		});
+			// }
 
 			_updateEditAddress() {
+				// If Address Form doesn't pass validation do nothing
+				if (!this.$.addressForm.validate()) return
 				// If Address exist update current one if not create one
 				if (this._organisationAddress.id)
 					this._updateOrganisationAddress();
 				else
 					this._createOrganisationAddress();
 
-				if (this._currentArea)
-					this._updateDeliveryArea();
-				else
-					this._createDeliveryArea();
+				// if (this._currentArea)
+				// 	this._updateDeliveryArea();
+				// else
+				// 	this._createDeliveryArea();
 
 			}
 
@@ -319,11 +328,12 @@
 				delete addressObject.businessId;
 				this.$.organisationApi.updateAddress(this._organisationAddress.id, addressObject)
 					.then(() => {
-						this.$.toast.success('Business Address Updated!');
-						this._organisationAddress = {};
-						this.isActive = false;
+						this.$.toast.success('Business Address Updated.');
+						this._viewAddress();
+						// this._organisationAddress = {};
+						// this.isActive = false;
 					}).catch((e) => {
-						this.$.toast.failed('Failed To Update Business Address');
+						this.$.toast.failed('Failed To Update Business Address.');
 						console.error(e.message);
 					});
 			}
@@ -333,50 +343,60 @@
 				this._organisationAddress.latitude = this._latLng.lat;
 				this.$.organisationApi.createAddress(this._organisationId, this._organisationAddress)
 					.then(() => {
-						this.$.toast.success('Business Address Created!');
-						this._organisationAddress = {};
-						this.isActive = false;
+						this.$.toast.success('Business Address Created.');
+						this._viewAddress();
 					}).catch((e) => {
-						this.$.toast.failed('Failed To Create Business Address');
+						this.$.toast.failed('Failed To Create Business Address.');
 						console.error(e.message);
 					});
 			}
 
-			_updateDeliveryArea() {
-				const area = {
-					latitude: this._latLng.lat,
-					longitude: this._latLng.lng,
-					radius: this._radius,
-				};
-
-				this.$.organisationApi.updateDeliveryArea(this._organisationId, this._currentArea.areaId, area)
-					.then(() => {
-						this.$.toast.success('Area Radius Updated!');
-					}).catch((e) => {
-						this.$.toast.failed('Failed To Update Area Radius');
-						console.error(e.message);
-					});
+			_checkLatLng() {
+				if (!this._latLng || !this._latLng.lat || !this._latLng.lng) {
+					this._addressInValid = true;
+				} else {
+					this._addressInValid = false;
+				}
 			}
 
-			_createDeliveryArea() {
-				const area = {
-					latitude: this._latLng.lat,
-					longitude: this._latLng.lng,
-					radius: this._radius,
-				};
+			// _updateDeliveryArea() {
+			// 	const area = {
+			// 		latitude: this._latLng.lat,
+			// 		longitude: this._latLng.lng,
+			// 		// radius: this._radius,
+			// 	};
 
-				this.$.organisationApi.createDeliveryArea(this._organisationId, area)
-					.then(() => {
-						// this.$.toast.success('Area Radius Created!');
-					}).catch((e) => {
-						this.$.toast.failed('Failed To Create Area Radius');
-						console.error(e.message);
-					});
+			// 	this.$.organisationApi.updateDeliveryArea(this._organisationId, this._currentArea.areaId, area)
+			// 		.then(() => {
+			// 			// this.$.toast.success('Area Radius Updated!');
+			// 		}).catch((e) => {
+			// 			this.$.toast.failed('Failed To Update Area Radius');
+			// 			console.error(e.message);
+			// 		});
+			// }
 
-			}
+			// _createDeliveryArea() {
+			// 	const area = {
+			// 		latitude: this._latLng.lat,
+			// 		longitude: this._latLng.lng,
+			// 		// radius: this._radius,
+			// 	};
+
+			// 	this.$.organisationApi.createDeliveryArea(this._organisationId, area)
+			// 		.then(() => {
+			// 			// this.$.toast.success('Area Radius Created!');
+			// 		}).catch((e) => {
+			// 			this.$.toast.failed('Failed To Create Area Radius');
+			// 			console.error(e.message);
+			// 		});
+
+			// }
 
 			_viewAddress() {
 				this._organisationAddress = {};
+				this._latLng = { lat: null, lng: null };
+				this.addressId = null;
+				this.$.addressForm.reset();
 				this.isActive = false;
 			}
 
