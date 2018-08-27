@@ -81,7 +81,7 @@
 			<br>
 		</paper-dialog>
 
-		<oc-form-container header="Add New Address">
+		<oc-form-container header="[[_title]] New Address">
 			<div class="row">
 				<div class="col-3">
 					<iron-form id="addressForm">
@@ -132,7 +132,7 @@
 				Validate Address
 			</paper-button>
 			<paper-button class="update-button" on-tap="_updateEditAddress" hidden="[[_addressValid]]" slot="button">
-				Update/Edit Address
+				[[_title]] Address
 			</paper-button>
 			<paper-button class="secondary-button" raised on-tap="_viewAddress" hidden="[[_addressValid]]" slot="button">
 				Back to Address
@@ -197,9 +197,6 @@
 				super.ready();
 			}
 
-			_foundId() {
-				alert(this.addressId);
-			}
 			/* Create circle then add it to the map*/
 			_createRadiusOnMap() {
 				if (this._latLng) {
@@ -252,6 +249,11 @@
 			}
 
 			_getOrganisationAddress() {
+				if (this.addressId) {
+					this._title = "Update/Edit"
+				} else {
+					this._title = "Add"
+				}
 				this.$.organisationApi.getAddress(this.addressId)
 					.then((request) => {
 						this._organisationAddress = request.response;
@@ -318,6 +320,7 @@
 				this.$.organisationApi.updateAddress(this._organisationAddress.id, addressObject)
 					.then(() => {
 						this.$.toast.success('Business Address Updated!');
+						this._organisationAddress = {};
 						this.isActive = false;
 					}).catch((e) => {
 						this.$.toast.failed('Failed To Update Business Address');
@@ -331,6 +334,7 @@
 				this.$.organisationApi.createAddress(this._organisationId, this._organisationAddress)
 					.then(() => {
 						this.$.toast.success('Business Address Created!');
+						this._organisationAddress = {};
 						this.isActive = false;
 					}).catch((e) => {
 						this.$.toast.failed('Failed To Create Business Address');
@@ -372,6 +376,7 @@
 			}
 
 			_viewAddress() {
+				this._organisationAddress = {};
 				this.isActive = false;
 			}
 
