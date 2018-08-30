@@ -255,11 +255,8 @@
 			}
 
 			_getOrganisationAddress() {
-				if (this.addressId) {
-					this._title = "Update/Edit"
-				} else {
-					this._title = "Add"
-				}
+				this._title = (this.addressId) ? "Update/Edit" : "Add";
+
 				if (!this.addressId) return
 				this.$.organisationApi.getAddress(this.addressId)
 					.then((request) => {
